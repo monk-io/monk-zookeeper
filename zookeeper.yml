@@ -1,0 +1,34 @@
+namespace: zookeeper
+
+monk-zookeeper:
+  metadata:
+    defines: metadata
+    name: ZooKeeper
+    description: Apache ZooKeeper is an effort to develop and maintain an open-source server which enables highly reliable distributed coordination.
+    website: https://zookeeper.apache.org/
+    publisher: monk.io
+    icon: https://zookeeper.apache.org/images/zookeeper_small.gif
+  defines: runnable
+  variables:
+    admin_server:
+      env: ZOO_ADMINSERVER_ENABLED
+      type: boolean
+      value: true
+    port:
+      type: int
+      value: 2181
+    image:
+      type: string
+      value: latest
+  containers:
+    db:
+      image: zookeeper
+      image-tag: <- `${image}`
+      ports:
+        - <- `${port}:2181`
+  services:
+    zookeper:
+      port: 2181
+      container: db
+      protocol: tcp
+      host-port: <- `${port}`
