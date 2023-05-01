@@ -14,9 +14,6 @@ monk-zookeeper:
       env: ZOO_ADMINSERVER_ENABLED
       type: boolean
       value: true
-    port:
-      type: int
-      value: 2181
     image:
       type: string
       value: latest
@@ -24,11 +21,8 @@ monk-zookeeper:
     db:
       image: zookeeper
       image-tag: <- `${image}`
-      ports:
-        - <- `${port}:2181`
   services:
     zookeper:
       port: 2181
       container: db
       protocol: tcp
-      host-port: <- `${port}`
