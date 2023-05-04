@@ -13,7 +13,7 @@ monk-zookeeper:
   variables:
     admin_server:
       env: ZOO_ADMINSERVER_ENABLED
-      type: boolean
+      type: bool
       value: true
     image:
       type: string
