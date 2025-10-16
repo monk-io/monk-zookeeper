@@ -1,0 +1,166 @@
+---
+title: Apache ZooKeeper
+description: Ready-to-run Apache ZooKeeper container template you can run directly or inherit to integrate distributed coordination and configuration management.
+primary_category: infrastructure
+tags: [zookeeper, coordination, distributed, template, runnable, consensus, service-discovery]
+integration_type: template
+hosting_models: [self-hosted]
+website_url: https://zookeeper.apache.org/
+docs_url: https://zookeeper.apache.org/doc/
+publisher: monk.io
+---
+
+## Overview
+
+This template provides a production‑ready Apache ZooKeeper instance as a Monk runnable. You can:
+
+- Run it directly to get a managed ZooKeeper server with sensible defaults
+- Inherit it in your own infrastructure to add distributed coordination and configuration management
+
+Apache ZooKeeper is a centralized service for maintaining configuration information, naming, providing distributed synchronization, and providing group services. It is used by distributed systems like Kafka, Hadoop, HBase, and others for coordination.
+
+## What this template manages
+
+- ZooKeeper container (`zookeeper` image, configurable tag)
+- Network services on ports 2181 (client), 2888 (follower), 3888 (election)
+- Persistent data and transaction log storage
+- Configuration management
+- Ensemble coordination (for multi-node setups)
+
+## Quick start (run directly)
+
+1) Load templates
+
+```bash
+monk load MANIFEST
+```
+
+2) Run ZooKeeper with defaults
+
+```bash
+monk run zookeeper/zookeeper
+```
+
+3) Customize configuration (recommended via inheritance)
+
+Running directly uses the defaults defined in this template's `variables`. For production deployments, it's recommended to inherit this template and customize the configuration as shown below.
+
+- Preferred: inherit and override variables as needed for your use case.
+- Alternative: fork/clone and edit the `variables` in `zookeeper.yml`, then `monk load MANIFEST` and run.
+
+Once started, connect to ZooKeeper at `localhost:2181` (or the runnable hostname inside Monk networks).
+
+## Configuration
+
+Key variables you can customize in this template:
+
+```yaml
+variables:
+  zookeeper-image-tag: "latest"       # container image tag
+  client-port: "2181"                 # client connection port
+  tick-time: "2000"                   # tick time in milliseconds
+  init-limit: "10"                    # follower init time limit
+  sync-limit: "5"                     # follower sync time limit
+  max-client-cnxns: "60"              # max concurrent client connections
+```
+
+Data is persisted under `${monk-volume-path}/zookeeper` on the host. Configuration files can be customized as needed for advanced setups.
+
+## Use by inheritance (recommended for distributed systems)
+
+Inherit ZooKeeper to provide coordination for distributed services. Example:
+
+```yaml
+namespace: myapp
+coordination:
+  defines: runnable
+  inherits: zookeeper/zookeeper
+kafka:
+  defines: runnable
+  containers:
+    kafka:
+      image: confluentinc/cp-kafka:latest
+      environment:
+        - KAFKA_ZOOKEEPER_CONNECT=coordination:2181
+  connections:
+    zk:
+      runnable: coordination
+      service: zookeeper
+  variables:
+    zookeeper-host:
+      value: <- connection-hostname("zk")
+```
+
+## Ports and connectivity
+
+- Service: `zookeeper` on TCP port `2181` (client connections)
+- Follower port: TCP port `2888` (ensemble communication)
+- Election port: TCP port `3888` (leader election)
+- From other runnables in the same process group, use `connection-hostname("<connection-name>")` to resolve the ZooKeeper host.
+
+## Persistence and configuration
+
+- Data path: `${monk-volume-path}/zookeeper/data:/data`
+- Transaction logs: `${monk-volume-path}/zookeeper/datalog:/datalog`
+- ZooKeeper stores znodes and transaction logs persistently
+- Ensure the host volumes are writable by the container user
+
+## Features
+
+- Distributed configuration management
+- Naming registry
+- Distributed synchronization (locks, barriers)
+- Leader election
+- Group membership services
+- Reliable data storage with ACID properties
+- Watch mechanism for change notifications
+
+## Ensemble (Cluster) Mode
+
+For production, run ZooKeeper in ensemble mode (3 or 5 nodes):
+- Provides high availability
+- Tolerates node failures
+- Requires odd number of nodes (3, 5, 7)
+- Maintains quorum for consistency
+
+## Use cases
+
+ZooKeeper is essential for:
+- Kafka cluster coordination
+- Hadoop NameNode HA
+- HBase master election
+- Distributed lock management
+- Configuration management
+- Service discovery
+
+
+## Related templates
+
+- See other templates in this repository for complementary services (Kafka, Hadoop, HBase)
+- Combine with monitoring tools for observability
+
+## Troubleshooting
+
+- Test ZooKeeper connectivity:
+
+```bash
+echo ruok | nc localhost 2181
+# Should return: imok
+```
+
+- Check server status:
+
+```bash
+echo stat | nc localhost 2181
+```
+
+- Check logs:
+
+```bash
+monk logs -l 500 -f zookeeper/zookeeper
+```
+
+- For ensemble setups, ensure all nodes can communicate on ports 2888 and 3888.
+- Verify persistent storage is writable by the container user.
+- Monitor disk space for transaction logs to prevent disk full issues.
+- If configuration changes don't apply, ensure the container has been restarted.
